@@ -103,7 +103,7 @@ Using `cv2.line()` to draw lines has the benefit that you can use coordinates ou
 
 ### Checkpoint
 
-The vanishing line is drawn and plausible for all three images.
+The vanishing line is computed and plausible for all three images. Note that the vanishing line may be outside the image, which is expected.
 
 ---
 
