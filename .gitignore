@@ -3,4 +3,5 @@
 images/flux_colonnade01.png
 images/flux_colonnade02.png
 torchhub/
-data/output_pointcloud.ply
+data/*.ply
+data/*.png
