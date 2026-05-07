@@ -125,7 +125,7 @@ def colorize_disparity(disp: np.ndarray) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 def _valid_mask(gt: np.ndarray, pred: np.ndarray) -> np.ndarray:
-    return np.isfinite(gt) & np.isfinite(pred)
+    return np.isfinite(gt) & (gt > 0) & np.isfinite(pred) & (pred > 0)
 
 
 def mean_absolute_error(gt: np.ndarray, pred: np.ndarray) -> float:
@@ -253,7 +253,7 @@ def plot_error_maps(gt_disp, maps: list):
     if len(maps) == 1:
         axes = [axes]
     for ax, (label, pred) in zip(axes, maps):
-        mask = np.isfinite(gt_disp) & np.isfinite(pred)
+        mask = _valid_mask(gt_disp, pred)
         err = np.full_like(gt_disp, np.nan)
         err[mask] = np.abs(gt_disp[mask] - pred[mask])
         im = ax.imshow(err, cmap="hot", vmin=0, vmax=10)
@@ -326,7 +326,15 @@ def main():
 
     print("\n=== Step 3: Evaluating disparity ===")
     all_maps = [("StereoBM", bm_disp), ("StereoSGBM", sgbm_disp), ("SGBM+WLS", wls_disp)]
-    for label, pred in all_maps:
+
+    # Restrict WLS evaluation to pixels where SGBM also has a valid prediction,
+    # so the metrics are not inflated by the extra hole-filling WLS does.
+    sgbm_coverage = np.isfinite(sgbm_disp) & (sgbm_disp > 0)
+    wls_disp_eval = wls_disp.copy()
+    wls_disp_eval[~sgbm_coverage] = np.nan
+
+    eval_maps = [("StereoBM", bm_disp), ("StereoSGBM", sgbm_disp), ("SGBM+WLS", wls_disp_eval)]
+    for label, pred in eval_maps:
         mae  = mean_absolute_error(gt_disp, pred)
         bad1 = bad_pixel_ratio(gt_disp, pred, threshold=1.0) * 100
         bad2 = bad_pixel_ratio(gt_disp, pred, threshold=2.0) * 100

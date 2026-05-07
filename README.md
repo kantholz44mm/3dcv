@@ -67,3 +67,52 @@ You'll get a loupe window, which is just a zoomed in version of the area around 
 All relevant information such as helper lines will be displayed in the main image after the relevant points are selected. When all points have been selected, the estimated height will be output next to the projected lines. It is also output on the terminal.
 
 Using this script, I get an estimated cup height of ~11.3 cm.
+
+# Exercise 3 – Simple Stereo
+
+## How to run
+
+```
+python3 scripts/ex3/stereo.py
+```
+
+All outputs are written to `data/`. No arguments needed.
+
+## What it produces
+
+| Output file | Description |
+|---|---|
+| `stereo_pair.png` | Side-by-side stereo images |
+| `disparity_{bm,sgbm,wls}.png` | Colour-coded disparity maps |
+| `disparity_comparison.png` | GT + all three maps side by side |
+| `disparity_error_maps.png` | Per-pixel absolute error (hot colourmap) |
+| `wls_confidence.png` | WLS filter confidence map |
+| `depth_map_*.png` | Depth maps in mm |
+| `pointcloud_*.ply` | Point clouds (raw + statistically cleaned) |
+
+## Evaluation results
+
+Only pixels that are finite and positive in **both** ground truth and prediction are counted.
+WLS is evaluated only on pixels where SGBM also has a valid prediction, so all three methods are compared on the same set of pixels (see below).
+
+| Method | MAE (px) | bad > 1 px | bad > 2 px |
+|---|---|---|---|
+| StereoBM | 3.24 | 23.7 % | 14.3 % |
+| StereoSGBM | 3.07 | 32.1 % | 17.2 % |
+| SGBM+WLS | **2.33** | 41.3 % | 23.4 % |
+
+### WLS evaluation: excluding the extra coverage
+
+WLS fills in regions where SGBM had no valid match (occlusion boundaries, low-texture zones) by propagating disparity from nearby confident areas. Those filled pixels are positive and finite, so they pass the validity mask — but they are guesses, often wrong, and naively inflated WLS's MAE from 2.33 to 3.37 px and its bad-pixel rates by ~10–12 pp.
+
+To compare fairly, WLS is restricted to the pixels where SGBM also has a valid prediction (`sgbm_coverage = np.isfinite(sgbm_disp) & (sgbm_disp > 0)`). On this shared set WLS achieves the best MAE (2.33 px vs 3.07 for SGBM), confirming that the smoothing genuinely improves accuracy where SGBM already has data. The bad-pixel rates remain higher than SGBM's because WLS edge-sharpening introduces small (~1 px) lateral shifts at depth discontinuities that push pixels just over the 1 px threshold.
+
+### Point cloud sizes
+
+| Method | Raw | After outlier removal |
+|---|---|---|
+| StereoBM | 681,775 | 675,113 (−1.0 %) |
+| StereoSGBM | 1,556,495 | 1,526,156 (−1.9 %) |
+| SGBM+WLS | 1,852,134 | 1,806,390 (−2.5 %) |
+
+Statistical outlier removal (k = 20 neighbours, 2 σ threshold) keeps between 97.5 % and 99.0 % of points. WLS produces the densest cloud but also the most outliers, consistent with its aggressive hole-filling behaviour. The cleaned PLY files are recommended for viewing in MeshLab.
