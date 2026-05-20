@@ -116,3 +116,62 @@ To compare fairly, WLS is restricted to the pixels where SGBM also has a valid p
 | SGBM+WLS | 1,852,134 | 1,806,390 (−2.5 %) |
 
 Statistical outlier removal (k = 20 neighbours, 2 σ threshold) keeps between 97.5 % and 99.0 % of points. WLS produces the densest cloud but also the most outliers, consistent with its aggressive hole-filling behaviour. The cleaned PLY files are recommended for viewing in MeshLab.
+
+# Exercise 4 – Stereo Rectification from Own Image Pair
+
+## Capture setup
+
+The stereo pair was captured hand-held with a single camera, moving it sideways between the two shots. Three different cameras were tried before getting usable results:
+
+- The first one was the integrated webcam of my laptop. It produced too low a resolution, resulting in bad matching for SIFT.
+- The second one was a 720p WebCam, which suffered the same result, but with even poorer contrasts and more noise.
+- My smartphone camera finally gave enough resolution and sharpness to produce a stable rectification.
+
+The scene used shows my couch table in its least organized state with lots of different objects, at an angle. This gives a lot of good points for the matching and rectification process. The phone was moved approximately 20 cm sideways between shots.
+
+Images are stored as:
+- `images/my_pair_left.png`
+- `images/my_pair_right.png`
+
+### Depth
+
+No baseline was measured, so depth is **relative only** (`BASELINE_M = None` in the script). Focal length is taken from the intrinsic calibration computed in Exercise 1 (`calibration.npz`, `K[0,0] = 621.5 px`). To enable metric depth, set `BASELINE_M` to the measured baseline in metres at the top of `scripts/ex4/stereo_rectify.py`. (This of couse won't change the visual appearance of the depth map, only the scale).
+
+## How to run
+
+```
+python3 scripts/ex4/stereo_rectify.py
+```
+
+All outputs are written to `data/`. No arguments needed. To tune disparity range, adjust `NDISP` at the top of the script (must be divisible by 16; the script rounds up automatically).
+
+**Note:** My dinky old laptop with 8 GB RAM could not handle processing the full resolution images and would run out of memory, especially the WLS filter. So, the images were downscaled before processing. If you run into memory issues, downscale the input pair before running the script (e.g. `mogrify -resize 50% images/my_pair_*.png`).
+
+## What it produces
+
+| Output file | Description |
+|---|---|
+| `ex4_rectified_left.png` / `ex4_rectified_right.png` | Warped image pair after uncalibrated rectification |
+| `ex4_disparity_sgbm.png` | Colour-coded SGBM disparity (exercise-description parameters) |
+| `ex4_disparity_wls.png` | Colour-coded SGBM+WLS disparity |
+| `ex4_depth.png` | Colour-coded depth map (relative, 1/d) |
+| `ex4_rectification.png` | Figure: rectified pair with epipolar guide lines + RANSAC inlier matches |
+| `ex4_stereo.png` | Figure: SGBM disparity, WLS disparity, depth map, WLS confidence |
+
+## Results and discussion
+
+![Rectification and inlier matches](images_for_documentation/ex4_rectification.png)
+
+![Disparity, depth map, and WLS confidence](images_for_documentation/ex4_stereo.png)
+
+**Feature matching and rectification** worked well. SIFT with Lowe's ratio test (0.75) found over 2000 matches on the desk scene, with roughly 1500 RANSAC inliers. The rectified images show clear horizontal alignment of corresponding features, confirmed by the epipolar guide lines in `ex4_rectification.png`.
+
+**Disparity (WLS)** is the most satisfying result. The SGBM+WLS map shows smooth, coherent surfaces on the desk and wall, with good depth ordering — foreground objects are visibly closer than the background, especially in areas with high contrast (between objects on the table). The plain SGBM map (exercise-description parameters) is noisier and has more holes, as expected.
+
+**Depth map** is the weakest result. Because the depth is purely relative (`1/d`), the scale is arbitrary and the distribution is heavily skewed — small disparity errors in low-texture regions produce very large `1/d` values that compress the interesting near-field range into a narrow band of the colormap. A hard depth cap (`MAX_DEPTH_CM`) was tried to push the colormap range toward the near field, but this made things worse: the scene depth range (30–100 cm) sits near the top end of a fixed 0–MAX cap, so nearly all pixels still cluster at the yellow end. The auto percentile scaling (5th–95th) works better because it spreads the colormap across whatever range the data actually contains, regardless of absolute scale.
+
+### Failure cases
+
+- **Near-zero disparity in flat regions** (white wall, floor): SGBM assigns very small or zero disparity here, which after `1/d` inversion becomes an extreme depth value. Clipping at the 5th–95th percentile partially mitigates this in the visualisation but does not fix the underlying estimate.
+- **Rectification warp distortion**: `stereoRectifyUncalibrated` can produce strong perspective warps when the baseline is not purely horizontal. Large parts of the image frame can fall outside the valid warp region; these are masked out before disparity computation using the intersection of both homography footprints.
+- **Memory pressure**: on an 8 GB laptop the WLS filter is the bottleneck. Downscaling to 50 % halved peak RAM usage at the cost of disparity resolution.
