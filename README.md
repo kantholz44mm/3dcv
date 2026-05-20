@@ -117,6 +117,12 @@ To compare fairly, WLS is restricted to the pixels where SGBM also has a valid p
 
 Statistical outlier removal (k = 20 neighbours, 2 σ threshold) keeps between 97.5 % and 99.0 % of points. WLS produces the densest cloud but also the most outliers, consistent with its aggressive hole-filling behaviour. The cleaned PLY files are recommended for viewing in MeshLab.
 
+![Disparity comparison (GT, BM, SGBM, WLS)](images_for_documentation/ex3_disparity_comparison.png)
+
+![Per-pixel absolute error maps](images_for_documentation/ex3_disparity_error_maps.png)
+
+![Cleaned WLS point cloud](images_for_documentation/ex3_pointcloud_artroom_wls_cleaned.png)
+
 # Exercise 4 – Stereo Rectification from Own Image Pair
 
 ## Capture setup
