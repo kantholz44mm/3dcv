@@ -6,3 +6,4 @@ torchhub/
 data/*.ply
 data/*.png
 captured_images
+colmap/
