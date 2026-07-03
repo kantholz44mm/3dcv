@@ -334,11 +334,33 @@ As the message said, I then tried it with the parameter `PYTORCH_CUDA_ALLOC_CONF
 
 ![i hate this entire field](images_for_documentation/vggt_huggingface.png)
 
-### Summary
+### Huggingface
 
-All in all: I wasted enormous amounts of time on this, and failed, simply because I do not have access to an NVIDIA GPU. I am fine with this result, because I have tried everything I could. I am okay with getting less credits for the class, as long as I don't have to touch any tool of this field ever again.
+While I still don't understand why/how Huggingface provides free compute, it did allow me to do some reconstruction finally. Firstly, here is the output of my input dataset of 30 images of the playground pirate ship:
 
-Now, here's a small excerpt of my bash history of the past couple of days. In total, I have fired ~1300 individual commands, some of which took over 30 minutes to run. Enjoy!
+![Pointcloud of the pirate ship](images_for_documentation/depthanything3_result_ship.png)
+
+The pointcloud is quite nice, even though most of the points are on the background/environment instead of the actual object I tried to capture. The model still did a fine job and gave me a quite dense pointcloud in the end. The depth estimation looks even nicer:
+
+![](images_for_documentation/depthanything3_input.webp) ![](images_for_documentation/depthanything3_depth.webp)
+
+I then tried the exact same dataset on VGGT (also through huggingface) and got this result:
+
+![Pointcloud of the pirate ship, by VGGT](images_for_documentation/vggt_result_ship.png)
+
+This is arguably even better, as there's more detail on the ship itself, as well as only the immediate surroundings (less points "wasted" on distant trees etc.)
+
+I then tried ReconViaGen, which tries to isolate the object of interest before matching features. This results in a "clean" mesh, which has sensible topology, but the overall shape is off in several places. The roof of the ship is captured perfectly, but the reflective slide is bent and "doubled". It looks good, but I would not write home about its dimensional accuracy, which, for the point clouds, looked decent.
+
+![](images_for_documentation/reconviagen_artifacts.png)
+
+Next up, I tried Trellis.2 by Microsoft. This takes in only a single image and generates impressive results considering this:
+
+![](images_for_documentation/trellis2_normals.png) ![](images_for_documentation/trellis2_result.png)
+
+### Pain & Suffering
+
+All in all: I wasted enormous amounts of time on this, and failed, simply because I do not have access to an NVIDIA GPU. I am fine with this result, because I have tried everything I could. Now, here's a small excerpt of my bash history of the past couple of days. In total, I have fired ~1300 individual commands, some of which took over 30 minutes to run. Enjoy!
 
 ```
 cd ..
